@@ -131,6 +131,24 @@ def get_my_missions(token = Header(None)):
         raise HTTPException(status_code=403, detail="Only players can do this")
     return functions.get_player_missions(user_id)
 
+# E8 - Submit mission completion details (Player)
+@app.post("/my-missions/{player_mission_id}/submit")
+def submit_completion(player_mission_id: int, data: CompletionIn, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "player":
+        raise HTTPException(status_code=403, detail="Only players can do this")
+    if data.completion_details.strip() == "":
+        raise HTTPException(status_code=422, detail="Completion details cannot be empty")
+    player_mission = functions.get_player_mission(player_mission_id)
+    if player_mission is None or player_mission["player_id"] != user_id:
+        raise HTTPException(status_code=404, detail="Accepted mission not found")
+    if player_mission["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Only accepted missions can be submitted")
+    return functions.submit_completion(player_mission_id, data.completion_details)
+
+
 # A3 - Generate a new access token
 @app.post("/auth/refresh")
 def refresh_token(refresh_token = Header(None)):
