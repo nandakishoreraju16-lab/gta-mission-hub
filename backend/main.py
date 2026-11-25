@@ -190,3 +190,12 @@ def create_reward(data: RewardIn, token = Header(None)):
     if functions.get_mission(data.mission_id) is None:
         raise HTTPException(status_code=404, detail="Mission not found")
     return functions.add_reward(mission_id=data.mission_id, name=data.name, description=data.description)
+
+
+# E12 - Get available rewards (All)
+@app.get("/rewards")
+def get_rewards(token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return functions.get_rewards()
