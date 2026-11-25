@@ -29,6 +29,12 @@ class CompletionIn(BaseModel):
 class DecisionIn(BaseModel):
     decision: str
 
+class RewardIn(BaseModel):
+    mission_id: int
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+
+
 # A1 - Register
 @app.post("/auth/register")
 def register_user(user: RegisterIn):
@@ -169,3 +175,18 @@ def refresh_token(refresh_token = Header(None)):
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     access_token = functions.create_token(user_id=user_id, token_type="access")
     return {"access_token": access_token, "token_type": "access"}
+
+
+# E11 - Create a reward for a mission (Mission Manager)
+@app.post("/rewards", status_code=201)
+def create_reward(data: RewardIn, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "manager":
+        raise HTTPException(status_code=403, detail="Only mission managers can do this")
+    if data.name.strip() == "" or data.description.strip() == "":
+        raise HTTPException(status_code=422, detail="Fields cannot be empty")
+    if functions.get_mission(data.mission_id) is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return functions.add_reward(mission_id=data.mission_id, name=data.name, description=data.description)

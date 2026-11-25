@@ -55,6 +55,15 @@ class PlayerMission(Base):
     completion_details = Column(String, nullable=True)
     accepted_at = Column(DateTime, default=datetime.now)
 
+class Reward(Base):
+    __tablename__ = "rewards"
+    id = Column(Integer, primary_key=True)
+    mission_id = Column(Integer, ForeignKey("missions.id"))
+    name = Column(String)
+    description = Column(String)
+    created_at = Column(DateTime, default=datetime.now)
+
+
 Base.metadata.create_all(engine)
 
 def verify_login(email, password):
@@ -265,3 +274,25 @@ def get_completed_missions(player_id):
         total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
     session.close()
     return {"completed_missions": missions, "total_xp": total_xp}
+
+
+# E11 - Create a reward for a mission
+
+def reward_dict(reward):
+    return {
+        "id": reward.id,
+        "mission_id": reward.mission_id,
+        "name": reward.name,
+        "description": reward.description,
+        "created_at": reward.created_at
+    }
+
+
+def add_reward(mission_id, name, description):
+    session = Session(engine)
+    reward = Reward(mission_id=mission_id, name=name, description=description)
+    session.add(reward)
+    session.commit()
+    result = reward_dict(reward)
+    session.close()
+    return result
