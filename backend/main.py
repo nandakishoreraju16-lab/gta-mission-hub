@@ -43,6 +43,24 @@ def login(data: LoginIn):
     return token
 
 
+# E1 - Create a mission manager account (Admin)
+@app.post("/admin/managers", status_code=201)
+def create_manager(user: RegisterIn, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can do this")
+    if user.username.strip() == "" or user.password.strip() == "":
+        raise HTTPException(status_code=422, detail="Username and password cannot be empty")
+    if "@" not in user.email or "." not in user.email.split("@")[-1]:
+        raise HTTPException(status_code=422, detail="Invalid email format")
+    result = functions.register_user(username=user.username, email=user.email, password=user.password, role="manager")
+    if not result:
+        raise HTTPException(status_code=409, detail="Email already registered")
+    return result
+
+
 # E6 - Accept a mission (Player)
 @app.post("/missions/{mission_id}/accept", status_code=201)
 def accept_mission(mission_id: int, token = Header(None)):
