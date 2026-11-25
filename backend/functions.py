@@ -47,3 +47,50 @@ class Mission(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 Base.metadata.create_all(engine)
+
+
+def verify_token(token, token_type):
+    try:
+        payload = jwt.decode(jwt=token, key=SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return False
+    if payload["token_type"] == token_type:
+        return payload["user_id"]
+    return False
+
+
+def get_user_role(user_id):
+    session = Session(engine)
+    user = session.get(User, user_id)
+    if user is None:
+        session.close()
+        return None
+    role = user.role
+    session.close()
+    return role
+
+
+# A1 - Register (new users are players) and E1 - Create manager (role="manager")
+
+def register_user(username, email, password, role="player"):
+    session = Session(engine)
+    user_existing = session.query(User).filter_by(email=email).first()
+    if user_existing is not None:
+        session.close()
+        return False
+
+    user = User(username=username, email=email, hashed_password=ph.hash(password), role=role)
+    session.add(user)
+    session.commit()
+    result = {"id": user.id, "username": user.username, "email": user.email, "role": user.role, "created_at": user.created_at}
+    session.close()
+    return result
+
+
+# The first admin is created when the app starts; email and password come from GitHub secrets
+def create_admin():
+    email = os.getenv("ADMIN_EMAIL", "admin@gta.com")
+    password = os.getenv("ADMIN_PASSWORD", "admin123")
+    register_user(username="admin", email=email, password=password, role="admin")
+
+create_admin()
