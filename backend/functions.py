@@ -147,6 +147,17 @@ def mission_dict(mission):
     }
 
 
+def add_mission(title, description, difficulty, location, reward, created_by):
+    session = Session(engine)
+    mission = Mission(title=title, description=description, difficulty=difficulty,
+                      location=location, reward=reward, created_by=created_by)
+    session.add(mission)
+    session.commit()
+    result = mission_dict(mission)
+    session.close()
+    return result
+
+
 def get_mission(mission_id):
     session = Session(engine)
     mission = session.get(Mission, mission_id)
