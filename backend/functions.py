@@ -94,3 +94,76 @@ def create_admin():
     register_user(username="admin", email=email, password=password, role="admin")
 
 create_admin()
+
+
+# Missions (E2 - E5)
+
+def mission_dict(mission):
+    return {
+        "id": mission.id,
+        "title": mission.title,
+        "description": mission.description,
+        "difficulty": mission.difficulty,
+        "xp": DIFFICULTY_XP[mission.difficulty],
+        "location": mission.location,
+        "reward": mission.reward,
+        "is_active": mission.is_active,
+        "created_by": mission.created_by,
+        "created_at": mission.created_at
+    }
+
+
+def add_mission(title, description, difficulty, location, reward, created_by):
+    session = Session(engine)
+    mission = Mission(title=title, description=description, difficulty=difficulty,
+                      location=location, reward=reward, created_by=created_by)
+    session.add(mission)
+    session.commit()
+    result = mission_dict(mission)
+    session.close()
+    return result
+
+
+def get_active_missions():
+    session = Session(engine)
+    missions = session.query(Mission).filter_by(is_active=1).order_by(Mission.created_at.desc()).all()
+    result = []
+    for mission in missions:
+        result.append(mission_dict(mission))
+    session.close()
+    return result
+
+
+def get_mission(mission_id):
+    session = Session(engine)
+    mission = session.get(Mission, mission_id)
+    if mission is None:
+        session.close()
+        return None
+    result = mission_dict(mission)
+    session.close()
+    return result
+
+
+def update_mission(mission_id, title, description, difficulty, location, reward, is_active):
+    session = Session(engine)
+    mission = session.get(Mission, mission_id)
+    if mission is None:
+        session.close()
+        return None
+    if title is not None:
+        mission.title = title
+    if description is not None:
+        mission.description = description
+    if difficulty is not None:
+        mission.difficulty = difficulty
+    if location is not None:
+        mission.location = location
+    if reward is not None:
+        mission.reward = reward
+    if is_active is not None:
+        mission.is_active = is_active
+    session.commit()
+    result = mission_dict(mission)
+    session.close()
+    return result
