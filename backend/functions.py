@@ -55,6 +55,22 @@ class PlayerMission(Base):
     completion_details = Column(String, nullable=True)
     accepted_at = Column(DateTime, default=datetime.now)
 
+class Reward(Base):
+    __tablename__ = "rewards"
+    id = Column(Integer, primary_key=True)
+    mission_id = Column(Integer, ForeignKey("missions.id"))
+    name = Column(String)
+    description = Column(String)
+    created_at = Column(DateTime, default=datetime.now)
+
+class PlayerReward(Base):
+    __tablename__ = "player_rewards"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("users.id"))
+    reward_id = Column(Integer, ForeignKey("rewards.id"))
+    assigned_at = Column(DateTime, default=datetime.now)
+
+
 Base.metadata.create_all(engine)
 
 def verify_login(email, password):
@@ -158,16 +174,6 @@ def add_mission(title, description, difficulty, location, reward, created_by):
     return result
 
 
-def get_active_missions():
-    session = Session(engine)
-    missions = session.query(Mission).filter_by(is_active=1).order_by(Mission.created_at.desc()).all()
-    result = []
-    for mission in missions:
-        result.append(mission_dict(mission))
-    session.close()
-    return result
-
-
 def get_mission(mission_id):
     session = Session(engine)
     mission = session.get(Mission, mission_id)
@@ -178,29 +184,6 @@ def get_mission(mission_id):
     session.close()
     return result
 
-
-def update_mission(mission_id, title, description, difficulty, location, reward, is_active):
-    session = Session(engine)
-    mission = session.get(Mission, mission_id)
-    if mission is None:
-        session.close()
-        return None
-    if title is not None:
-        mission.title = title
-    if description is not None:
-        mission.description = description
-    if difficulty is not None:
-        mission.difficulty = difficulty
-    if location is not None:
-        mission.location = location
-    if reward is not None:
-        mission.reward = reward
-    if is_active is not None:
-        mission.is_active = is_active
-    session.commit()
-    result = mission_dict(mission)
-    session.close()
-    return result
 
 def player_mission_dict(player_mission, mission):
     return {
@@ -234,5 +217,186 @@ def accept_mission(player_id, mission_id):
     session.commit()
     mission = session.get(Mission, mission_id)
     result = player_mission_dict(player_mission, mission)
+    session.close()
+    return result
+
+
+def get_player_missions(player_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id).order_by(PlayerMission.accepted_at.desc()).all()
+    result = []
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        result.append(player_mission_dict(row, mission))
+    session.close()
+    return result
+
+
+def get_player_mission(player_mission_id):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    if row is None:
+        session.close()
+        return None
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
+
+def submit_completion(player_mission_id, completion_details):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    row.status = "submitted"
+    row.completion_details = completion_details
+    session.commit()
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
+
+def review_completion(player_mission_id, decision):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    if decision == "approve":
+        row.status = "approved"
+    else:
+        row.status = "rejected"
+    session.commit()
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
+
+def get_completed_missions(player_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").all()
+    missions = []
+    total_xp = 0
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        missions.append(player_mission_dict(row, mission))
+        total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
+    session.close()
+    return {"completed_missions": missions, "total_xp": total_xp}
+
+
+# E11 - Create a reward for a mission
+
+def reward_dict(reward):
+    return {
+        "id": reward.id,
+        "mission_id": reward.mission_id,
+        "name": reward.name,
+        "description": reward.description,
+        "created_at": reward.created_at
+    }
+
+
+def add_reward(mission_id, name, description):
+    session = Session(engine)
+    reward = Reward(mission_id=mission_id, name=name, description=description)
+    session.add(reward)
+    session.commit()
+    result = reward_dict(reward)
+    session.close()
+    return result
+
+
+# E12 - Get available rewards
+
+def get_rewards():
+    session = Session(engine)
+    rewards = session.query(Reward).all()
+    result = []
+    for reward in rewards:
+        result.append(reward_dict(reward))
+    session.close()
+    return result
+
+
+# E13 - Assign a reward to a player (only after mission is approved)
+
+def get_reward(reward_id):
+    session = Session(engine)
+    reward = session.get(Reward, reward_id)
+    if reward is None:
+        session.close()
+        return None
+    result = reward_dict(reward)
+    session.close()
+    return result
+
+
+def has_approved_mission(player_id, mission_id):
+    session = Session(engine)
+    row = session.query(PlayerMission).filter_by(player_id=player_id, mission_id=mission_id, status="approved").first()
+    session.close()
+    return row is not None
+
+
+def reward_already_assigned(player_id, reward_id):
+    session = Session(engine)
+    row = session.query(PlayerReward).filter_by(player_id=player_id, reward_id=reward_id).first()
+    session.close()
+    return row is not None
+
+
+def assign_reward(player_id, reward_id):
+    session = Session(engine)
+    player_reward = PlayerReward(player_id=player_id, reward_id=reward_id)
+    session.add(player_reward)
+    session.commit()
+    result = {"id": player_reward.id, "player_id": player_reward.player_id,
+              "reward_id": player_reward.reward_id, "assigned_at": player_reward.assigned_at}
+    session.close()
+    return result
+
+
+# E14 - Leaderboard (players ranked by xp)
+
+def get_total_xp(session, player_id):
+    rows = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").all()
+    total_xp = 0
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
+    return total_xp
+
+
+def get_leaderboard():
+    session = Session(engine)
+    players = session.query(User).filter_by(role="player").all()
+    board = []
+    for player in players:
+        board.append({"player_id": player.id, "username": player.username, "xp": get_total_xp(session, player.id)})
+    session.close()
+    board.sort(key=lambda item: item["xp"], reverse=True)
+    rank = 1
+    for item in board:
+        item["rank"] = rank
+        rank = rank + 1
+    return board
+
+
+# E15 - Player profile and stats
+
+def get_player_profile(player_id):
+    session = Session(engine)
+    player = session.get(User, player_id)
+    if player is None or player.role != "player":
+        session.close()
+        return None
+    completed = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").count()
+    rewards = session.query(PlayerReward).filter_by(player_id=player_id).count()
+    result = {
+        "player_id": player.id,
+        "username": player.username,
+        "completed_missions": completed,
+        "total_rewards": rewards,
+        "xp": get_total_xp(session, player_id)
+    }
     session.close()
     return result
