@@ -160,3 +160,12 @@ def get_completed_missions(token = Header(None)):
         raise HTTPException(status_code=403, detail="Only players can do this")
     return functions.get_completed_missions(user_id)
 
+
+# A3 - Generate a new access token
+@app.post("/auth/refresh")
+def refresh_token(refresh_token = Header(None)):
+    user_id = functions.verify_token(token=refresh_token, token_type="refresh")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    access_token = functions.create_token(user_id=user_id, token_type="access")
+    return {"access_token": access_token, "token_type": "access"}
