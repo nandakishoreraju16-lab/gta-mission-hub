@@ -252,6 +252,19 @@ def submit_completion(player_mission_id, completion_details):
     session.close()
     return result
 
+def review_completion(player_mission_id, decision):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    if decision == "approve":
+        row.status = "approved"
+    else:
+        row.status = "rejected"
+    session.commit()
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
 # E11 - Create a reward for a mission
 
 def reward_dict(reward):

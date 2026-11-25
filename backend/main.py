@@ -139,6 +139,24 @@ def submit_completion(player_mission_id: int, data: CompletionIn, token = Header
         raise HTTPException(status_code=400, detail="Only accepted missions can be submitted")
     return functions.submit_completion(player_mission_id, data.completion_details)
 
+# E9 - Approve or reject a mission completion (Mission Manager)
+@app.patch("/completions/{player_mission_id}")
+def review_completion(player_mission_id: int, data: DecisionIn, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "manager":
+        raise HTTPException(status_code=403, detail="Only mission managers can do this")
+    if data.decision not in ["approve", "reject"]:
+        raise HTTPException(status_code=422, detail="Decision must be approve or reject")
+    player_mission = functions.get_player_mission(player_mission_id)
+    if player_mission is None:
+        raise HTTPException(status_code=404, detail="Completion not found")
+    if player_mission["status"] != "submitted":
+        raise HTTPException(status_code=400, detail="Only submitted missions can be reviewed")
+    return functions.review_completion(player_mission_id, data.decision)
+
+
 
 # A3 - Generate a new access token
 @app.post("/auth/refresh")
