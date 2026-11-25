@@ -112,6 +112,15 @@ def accept_mission(mission_id: int, token = Header(None)):
     return functions.accept_mission(player_id=user_id, mission_id=mission_id)
 
 
+# E7 - Get missions accepted by the logged-in player (Player)
+@app.get("/my-missions")
+def get_my_missions(token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "player":
+        raise HTTPException(status_code=403, detail="Only players can do this")
+    return functions.get_player_missions(user_id)
 
 # A3 - Generate a new access token
 @app.post("/auth/refresh")
