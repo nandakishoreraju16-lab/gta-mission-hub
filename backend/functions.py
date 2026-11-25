@@ -230,7 +230,26 @@ def accept_mission(player_id, mission_id):
     session.close()
     return result
 
+def get_player_missions(player_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id).order_by(PlayerMission.accepted_at.desc()).all()
+    result = []
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        result.append(player_mission_dict(row, mission))
+    session.close()
+    return result
 
+def get_player_mission(player_mission_id):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    if row is None:
+        session.close()
+        return None
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
 
 # E11 - Create a reward for a mission
 
