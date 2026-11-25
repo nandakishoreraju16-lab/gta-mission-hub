@@ -227,3 +227,12 @@ def has_open_mission(player_id, mission_id):
     return found
 
 
+def accept_mission(player_id, mission_id):
+    session = Session(engine)
+    player_mission = PlayerMission(player_id=player_id, mission_id=mission_id)
+    session.add(player_mission)
+    session.commit()
+    mission = session.get(Mission, mission_id)
+    result = player_mission_dict(player_mission, mission)
+    session.close()
+    return result

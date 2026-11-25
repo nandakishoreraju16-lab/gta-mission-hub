@@ -135,3 +135,19 @@ def update_mission(mission_id: int, data: MissionUpdateIn, token = Header(None))
     return result
 
 
+# E6 - Accept a mission (Player)
+@app.post("/missions/{mission_id}/accept", status_code=201)
+def accept_mission(mission_id: int, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "player":
+        raise HTTPException(status_code=403, detail="Only players can do this")
+    mission = functions.get_mission(mission_id)
+    if mission is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    if mission["is_active"] == 0:
+        raise HTTPException(status_code=400, detail="Mission is not active")
+    if functions.has_open_mission(user_id, mission_id):
+        raise HTTPException(status_code=409, detail="Mission already accepted")
+    return functions.accept_mission(player_id=user_id, mission_id=mission_id)
