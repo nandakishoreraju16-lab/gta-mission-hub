@@ -1,0 +1,49 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/gta-api
+      VERSION: v${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image
+        run: docker build -t $IMAGE:$VERSION -t $IMAGE:latest -f backend/dockerfile backend
+
+      - name: Push image
+        run: |
+          docker push $IMAGE:$VERSION
+          docker push $IMAGE:latest
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            sudo systemctl enable --now docker
+            # gta.db lives here on EC2, so data survives every redeploy
+            sudo mkdir -p /opt/gta/data
+            sudo docker pull ${{ env.IMAGE }}:${{ env.VERSION }}
+            sudo docker rm -f gta-api || true
+            sudo docker run -d --name gta-api --restart unless-stopped \
+              -p 8001:8001 \
+              -v /opt/gta/data:/app/data \
+              -e SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+              ${{ env.IMAGE }}:${{ env.VERSION }}
+            sudo docker ps --filter name=gta-api
