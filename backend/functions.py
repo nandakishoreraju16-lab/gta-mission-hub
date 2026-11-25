@@ -25,7 +25,7 @@ DIFFICULTY_XP = {"easy": 50, "medium": 100, "hard": 200, "special": 500}
 
 
 class User(Base):
-    _tablename_ = "users"
+    __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     username = Column(String)
     email = Column(String, unique=True)
@@ -35,7 +35,7 @@ class User(Base):
 
 
 class Mission(Base):
-    _tablename_ = "missions"
+    __tablename__ = "missions"
     id = Column(Integer, primary_key=True)
     title = Column(String)
     description = Column(String)

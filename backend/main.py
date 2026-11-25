@@ -30,6 +30,12 @@ class MissionUpdateIn(BaseModel):
     reward: str = Field(None, min_length=1)
     is_active: int = Field(None, ge=0, le=1)
 
+class CompletionIn(BaseModel):
+    completion_details: str = Field(min_length=1)
+
+
+class DecisionIn(BaseModel):
+    decision: str
 
 # A1 - Register
 @app.post("/auth/register")
