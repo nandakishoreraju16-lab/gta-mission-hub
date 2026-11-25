@@ -353,3 +353,29 @@ def assign_reward(player_id, reward_id):
               "reward_id": player_reward.reward_id, "assigned_at": player_reward.assigned_at}
     session.close()
     return result
+
+
+# E14 - Leaderboard (players ranked by xp)
+
+def get_total_xp(session, player_id):
+    rows = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").all()
+    total_xp = 0
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
+    return total_xp
+
+
+def get_leaderboard():
+    session = Session(engine)
+    players = session.query(User).filter_by(role="player").all()
+    board = []
+    for player in players:
+        board.append({"player_id": player.id, "username": player.username, "xp": get_total_xp(session, player.id)})
+    session.close()
+    board.sort(key=lambda item: item["xp"], reverse=True)
+    rank = 1
+    for item in board:
+        item["rank"] = rank
+        rank = rank + 1
+    return board
