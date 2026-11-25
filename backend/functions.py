@@ -296,3 +296,15 @@ def add_reward(mission_id, name, description):
     result = reward_dict(reward)
     session.close()
     return result
+
+
+# E12 - Get available rewards
+
+def get_rewards():
+    session = Session(engine)
+    rewards = session.query(Reward).all()
+    result = []
+    for reward in rewards:
+        result.append(reward_dict(reward))
+    session.close()
+    return result
