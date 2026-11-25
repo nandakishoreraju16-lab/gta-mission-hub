@@ -241,6 +241,17 @@ def get_player_mission(player_mission_id):
     session.close()
     return result
 
+def submit_completion(player_mission_id, completion_details):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    row.status = "submitted"
+    row.completion_details = completion_details
+    session.commit()
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
 # E11 - Create a reward for a mission
 
 def reward_dict(reward):
