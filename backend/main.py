@@ -231,3 +231,15 @@ def get_leaderboard(token = Header(None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return functions.get_leaderboard()
+
+
+# E15 - Get player profile and statistics (All)
+@app.get("/players/{player_id}/profile")
+def get_player_profile(player_id: int, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    result = functions.get_player_profile(player_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return result

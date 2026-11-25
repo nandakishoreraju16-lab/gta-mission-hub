@@ -379,3 +379,24 @@ def get_leaderboard():
         item["rank"] = rank
         rank = rank + 1
     return board
+
+
+# E15 - Player profile and stats
+
+def get_player_profile(player_id):
+    session = Session(engine)
+    player = session.get(User, player_id)
+    if player is None or player.role != "player":
+        session.close()
+        return None
+    completed = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").count()
+    rewards = session.query(PlayerReward).filter_by(player_id=player_id).count()
+    result = {
+        "player_id": player.id,
+        "username": player.username,
+        "completed_missions": completed,
+        "total_rewards": rewards,
+        "xp": get_total_xp(session, player_id)
+    }
+    session.close()
+    return result
