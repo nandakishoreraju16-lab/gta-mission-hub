@@ -94,6 +94,15 @@ def create_mission(data: MissionIn, token = Header(None)):
                                  location=data.location, reward=data.reward, created_by=user_id)
 
 
+# E3 - Get all available missions (All)
+@app.get("/missions")
+def get_missions(token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return functions.get_active_missions()
+
+
 # E6 - Accept a mission (Player)
 @app.post("/missions/{mission_id}/accept", status_code=201)
 def accept_mission(mission_id: int, token = Header(None)):

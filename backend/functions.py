@@ -174,6 +174,16 @@ def add_mission(title, description, difficulty, location, reward, created_by):
     return result
 
 
+def get_active_missions():
+    session = Session(engine)
+    missions = session.query(Mission).filter_by(is_active=1).order_by(Mission.created_at.desc()).all()
+    result = []
+    for mission in missions:
+        result.append(mission_dict(mission))
+    session.close()
+    return result
+
+
 def get_mission(mission_id):
     session = Session(engine)
     mission = session.get(Mission, mission_id)
