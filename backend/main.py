@@ -165,6 +165,16 @@ def review_completion(player_mission_id: int, data: DecisionIn, token = Header(N
         raise HTTPException(status_code=400, detail="Only submitted missions can be reviewed")
     return functions.review_completion(player_mission_id, data.decision)
 
+# E10 - Get the player's completed mission history (Player)
+@app.get("/my-missions/completed")
+def get_completed_missions(token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "player":
+        raise HTTPException(status_code=403, detail="Only players can do this")
+    return functions.get_completed_missions(user_id)
+
 
 
 # A3 - Generate a new access token

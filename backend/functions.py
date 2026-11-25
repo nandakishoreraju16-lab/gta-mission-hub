@@ -275,6 +275,18 @@ def review_completion(player_mission_id, decision):
     session.close()
     return result
 
+def get_completed_missions(player_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").all()
+    missions = []
+    total_xp = 0
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        missions.append(player_mission_dict(row, mission))
+        total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
+    session.close()
+    return {"completed_missions": missions, "total_xp": total_xp}
+
 # E11 - Create a reward for a mission
 
 def reward_dict(reward):
