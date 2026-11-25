@@ -63,6 +63,13 @@ class Reward(Base):
     description = Column(String)
     created_at = Column(DateTime, default=datetime.now)
 
+class PlayerReward(Base):
+    __tablename__ = "player_rewards"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("users.id"))
+    reward_id = Column(Integer, ForeignKey("rewards.id"))
+    assigned_at = Column(DateTime, default=datetime.now)
+
 
 Base.metadata.create_all(engine)
 
@@ -306,5 +313,43 @@ def get_rewards():
     result = []
     for reward in rewards:
         result.append(reward_dict(reward))
+    session.close()
+    return result
+
+
+# E13 - Assign a reward to a player (only after mission is approved)
+
+def get_reward(reward_id):
+    session = Session(engine)
+    reward = session.get(Reward, reward_id)
+    if reward is None:
+        session.close()
+        return None
+    result = reward_dict(reward)
+    session.close()
+    return result
+
+
+def has_approved_mission(player_id, mission_id):
+    session = Session(engine)
+    row = session.query(PlayerMission).filter_by(player_id=player_id, mission_id=mission_id, status="approved").first()
+    session.close()
+    return row is not None
+
+
+def reward_already_assigned(player_id, reward_id):
+    session = Session(engine)
+    row = session.query(PlayerReward).filter_by(player_id=player_id, reward_id=reward_id).first()
+    session.close()
+    return row is not None
+
+
+def assign_reward(player_id, reward_id):
+    session = Session(engine)
+    player_reward = PlayerReward(player_id=player_id, reward_id=reward_id)
+    session.add(player_reward)
+    session.commit()
+    result = {"id": player_reward.id, "player_id": player_reward.player_id,
+              "reward_id": player_reward.reward_id, "assigned_at": player_reward.assigned_at}
     session.close()
     return result
