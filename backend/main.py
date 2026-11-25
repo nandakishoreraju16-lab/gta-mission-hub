@@ -14,6 +14,14 @@ class LoginIn(BaseModel):
     email: str = Field(min_length=1)
     password: str = Field(min_length=1)
 
+class MissionIn(BaseModel):
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    difficulty: str
+    location: str = Field(min_length=1)
+    reward: str = Field(min_length=1)
+
+
 class CompletionIn(BaseModel):
     completion_details: str = Field(min_length=1)
 
@@ -59,6 +67,22 @@ def create_manager(user: RegisterIn, token = Header(None)):
     if not result:
         raise HTTPException(status_code=409, detail="Email already registered")
     return result
+
+
+# E2 - Create a new mission (Mission Manager)
+@app.post("/missions", status_code=201)
+def create_mission(data: MissionIn, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "manager":
+        raise HTTPException(status_code=403, detail="Only mission managers can do this")
+    if data.title.strip() == "" or data.description.strip() == "" or data.location.strip() == "" or data.reward.strip() == "":
+        raise HTTPException(status_code=422, detail="Fields cannot be empty")
+    if data.difficulty not in functions.DIFFICULTY_XP:
+        raise HTTPException(status_code=422, detail="Difficulty must be easy, medium, hard or special")
+    return functions.add_mission(title=data.title, description=data.description, difficulty=data.difficulty,
+                                 location=data.location, reward=data.reward, created_by=user_id)
 
 
 # E6 - Accept a mission (Player)
