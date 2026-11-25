@@ -14,22 +14,6 @@ class LoginIn(BaseModel):
     email: str = Field(min_length=1)
     password: str = Field(min_length=1)
 
-class MissionIn(BaseModel):
-    title: str = Field(min_length=1)
-    description: str = Field(min_length=1)
-    difficulty: str
-    location: str = Field(min_length=1)
-    reward: str = Field(min_length=1)
-
-
-class MissionUpdateIn(BaseModel):
-    title: str = Field(None, min_length=1)
-    description: str = Field(None, min_length=1)
-    difficulty: str = None
-    location: str = Field(None, min_length=1)
-    reward: str = Field(None, min_length=1)
-    is_active: int = Field(None, ge=0, le=1)
-
 class CompletionIn(BaseModel):
     completion_details: str = Field(min_length=1)
 
@@ -57,82 +41,6 @@ def login(data: LoginIn):
     if not token:
         raise HTTPException( status_code=401,detail="Invalid Credentials")
     return token
-
-
-# E1 - Create a mission manager account (Admin)
-@app.post("/admin/managers", status_code=201)
-def create_manager(user: RegisterIn, token = Header(None)):
-    user_id = functions.verify_token(token=token, token_type="access")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    if functions.get_user_role(user_id) != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can do this")
-    if user.username.strip() == "" or user.password.strip() == "":
-        raise HTTPException(status_code=422, detail="Username and password cannot be empty")
-    if "@" not in user.email or "." not in user.email.split("@")[-1]:
-        raise HTTPException(status_code=422, detail="Invalid email format")
-    result = functions.register_user(username=user.username, email=user.email, password=user.password, role="manager")
-    if not result:
-        raise HTTPException(status_code=409, detail="Email already registered")
-    return result
-
-
-# E2 - Create a new mission (Mission Manager)
-@app.post("/missions", status_code=201)
-def create_mission(data: MissionIn, token = Header(None)):
-    user_id = functions.verify_token(token=token, token_type="access")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    if functions.get_user_role(user_id) != "manager":
-        raise HTTPException(status_code=403, detail="Only mission managers can do this")
-    if data.title.strip() == "" or data.description.strip() == "" or data.location.strip() == "" or data.reward.strip() == "":
-        raise HTTPException(status_code=422, detail="Fields cannot be empty")
-    if data.difficulty not in functions.DIFFICULTY_XP:
-        raise HTTPException(status_code=422, detail="Difficulty must be easy, medium, hard or special")
-    return functions.add_mission(title=data.title, description=data.description, difficulty=data.difficulty,
-                                 location=data.location, reward=data.reward, created_by=user_id)
-
-
-# E3 - Get all available missions (All)
-@app.get("/missions")
-def get_missions(token = Header(None)):
-    user_id = functions.verify_token(token=token, token_type="access")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return functions.get_active_missions()
-
-
-# E4 - Get details of a particular mission (All)
-@app.get("/missions/{mission_id}")
-def get_mission(mission_id: int, token = Header(None)):
-    user_id = functions.verify_token(token=token, token_type="access")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    result = functions.get_mission(mission_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Mission not found")
-    return result
-
-
-# E5 - Update mission details or availability (Mission Manager)
-@app.patch("/missions/{mission_id}")
-def update_mission(mission_id: int, data: MissionUpdateIn, token = Header(None)):
-    user_id = functions.verify_token(token=token, token_type="access")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    if functions.get_user_role(user_id) != "manager":
-        raise HTTPException(status_code=403, detail="Only mission managers can do this")
-    for value in [data.title, data.description, data.location, data.reward]:
-        if value is not None and value.strip() == "":
-            raise HTTPException(status_code=422, detail="Fields cannot be empty")
-    if data.difficulty is not None and data.difficulty not in functions.DIFFICULTY_XP:
-        raise HTTPException(status_code=422, detail="Difficulty must be easy, medium, hard or special")
-    result = functions.update_mission(mission_id=mission_id, title=data.title, description=data.description,
-                                      difficulty=data.difficulty, location=data.location,
-                                      reward=data.reward, is_active=data.is_active)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Mission not found")
-    return result
 
 
 # E6 - Accept a mission (Player)
