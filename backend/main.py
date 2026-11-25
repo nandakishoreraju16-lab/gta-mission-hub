@@ -222,3 +222,12 @@ def assign_reward(reward_id: int, data: AssignIn, token = Header(None)):
     if functions.reward_already_assigned(data.player_id, reward_id):
         raise HTTPException(status_code=409, detail="Reward already assigned to this player")
     return functions.assign_reward(player_id=data.player_id, reward_id=reward_id)
+
+
+# E14 - Get player rankings and leaderboard (All)
+@app.get("/leaderboard")
+def get_leaderboard(token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return functions.get_leaderboard()
