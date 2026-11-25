@@ -46,6 +46,15 @@ class Mission(Base):
     created_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.now)
 
+class PlayerMission(Base):
+    __tablename__ = "player_missions"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("users.id"))
+    mission_id = Column(Integer, ForeignKey("missions.id"))
+    status = Column(String, default="accepted")
+    completion_details = Column(String, nullable=True)
+    accepted_at = Column(DateTime, default=datetime.now)
+
 Base.metadata.create_all(engine)
 
 def verify_login(email, password):
@@ -192,3 +201,177 @@ def update_mission(mission_id, title, description, difficulty, location, reward,
     result = mission_dict(mission)
     session.close()
     return result
+
+# def accept_mission(mission_id, player_id):
+#     session = Session(engine)
+#     mission = session.get(Mission, mission_id)
+#     if mission is None:
+#         session.close()
+#         return None
+#     if mission.is_active == 0:
+#         session.close()
+#         return False
+#     progress = mission.player_progress
+#     if progress == "":
+#         progress = str(player_id) + ":accepted"
+#     else:
+#         if str(player_id) in progress:
+#             session.close()
+#             return False
+#         progress = progress + "," + str(player_id) + ":accepted"
+#     mission.player_progress = progress
+#     session.commit()
+#     result = {
+#         "message": "Mission accepted successfully",
+#         "mission_id": mission.id,
+#         "player_id": player_id
+#     }
+#     session.close()
+#     return result
+
+# # E7 - Get player's accepted missions
+
+# def get_player_missions(player_id):
+#     session = Session(engine)
+#     missions = session.query(Mission).all()
+#     result = []
+#     for mission in missions:
+#         progress = mission.player_progress
+#         if progress != "":
+#             players = progress.split(",")
+#             for player in players:
+#                 if player == str(player_id) + ":accepted":
+#                     data = mission_dict(mission)
+#                     data["status"] = "accepted"
+#                     result.append(data)
+#     session.close()
+#     return result
+
+# # E8 - Player submits mission completion
+
+# def submit_mission(mission_id, player_id):
+#     session = Session(engine)
+#     mission = session.get(Mission, mission_id)
+#     if mission is None:
+#         session.close()
+#         return None
+#     progress = mission.player_progress
+#     if progress == "":
+#         session.close()
+#         return False
+#     players = progress.split(",")
+#     found = False
+#     for i in range(len(players)):
+#         if players[i] == str(player_id) + ":accepted":
+#             players[i] = str(player_id) + ":submitted"
+#             found = True
+#             break
+#     if not found:
+#         session.close()
+#         return False
+#     mission.player_progress = ",".join(players)
+#     session.commit()
+#     result = {
+#         "message": "Mission completion submitted successfully",
+#         "mission_id": mission.id,
+#         "status": "submitted"
+#     }
+#     session.close()
+#     return result
+
+def player_mission_dict(player_mission, mission):
+    return {
+        "id": player_mission.id,
+        "player_id": player_mission.player_id,
+        "mission_id": player_mission.mission_id,
+        "mission_title": mission.title,
+        "difficulty": mission.difficulty,
+        "xp": DIFFICULTY_XP[mission.difficulty],
+        "status": player_mission.status,
+        "completion_details": player_mission.completion_details,
+        "accepted_at": player_mission.accepted_at
+    }
+
+
+def has_open_mission(player_id, mission_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id, mission_id=mission_id).all()
+    found = False
+    for row in rows:
+        if row.status == "accepted" or row.status == "submitted":
+            found = True
+    session.close()
+    return found
+
+
+def accept_mission(player_id, mission_id):
+    session = Session(engine)
+    player_mission = PlayerMission(player_id=player_id, mission_id=mission_id)
+    session.add(player_mission)
+    session.commit()
+    mission = session.get(Mission, mission_id)
+    result = player_mission_dict(player_mission, mission)
+    session.close()
+    return result
+
+
+def get_player_missions(player_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id).order_by(PlayerMission.accepted_at.desc()).all()
+    result = []
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        result.append(player_mission_dict(row, mission))
+    session.close()
+    return result
+
+
+def get_player_mission(player_mission_id):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    if row is None:
+        session.close()
+        return None
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
+
+def submit_completion(player_mission_id, completion_details):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    row.status = "submitted"
+    row.completion_details = completion_details
+    session.commit()
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
+
+def review_completion(player_mission_id, decision):
+    session = Session(engine)
+    row = session.get(PlayerMission, player_mission_id)
+    if decision == "approve":
+        row.status = "approved"
+    else:
+        row.status = "rejected"
+    session.commit()
+    mission = session.get(Mission, row.mission_id)
+    result = player_mission_dict(row, mission)
+    session.close()
+    return result
+
+
+def get_completed_missions(player_id):
+    session = Session(engine)
+    rows = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").all()
+    missions = []
+    total_xp = 0
+    for row in rows:
+        mission = session.get(Mission, row.mission_id)
+        missions.append(player_mission_dict(row, mission))
+        total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
+    session.close()
+    return {"completed_missions": missions, "total_xp": total_xp}
