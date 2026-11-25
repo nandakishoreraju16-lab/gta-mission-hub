@@ -34,6 +34,9 @@ class RewardIn(BaseModel):
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)
 
+class AssignIn(BaseModel):
+    player_id: int
+
 
 # A1 - Register
 @app.post("/auth/register")
@@ -199,3 +202,23 @@ def get_rewards(token = Header(None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return functions.get_rewards()
+
+
+# E13 - Assign a reward to a player (Mission Manager)
+@app.post("/rewards/{reward_id}/assign", status_code=201)
+def assign_reward(reward_id: int, data: AssignIn, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if functions.get_user_role(user_id) != "manager":
+        raise HTTPException(status_code=403, detail="Only mission managers can do this")
+    reward = functions.get_reward(reward_id)
+    if reward is None:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    if functions.get_user_role(data.player_id) != "player":
+        raise HTTPException(status_code=404, detail="Player not found")
+    if not functions.has_approved_mission(data.player_id, reward["mission_id"]):
+        raise HTTPException(status_code=400, detail="Player has no approved completion for this mission")
+    if functions.reward_already_assigned(data.player_id, reward_id):
+        raise HTTPException(status_code=409, detail="Reward already assigned to this player")
+    return functions.assign_reward(player_id=data.player_id, reward_id=reward_id)
