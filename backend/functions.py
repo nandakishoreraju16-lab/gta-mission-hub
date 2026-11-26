@@ -174,6 +174,16 @@ def add_mission(title, description, difficulty, location, reward, created_by):
     return result
 
 
+def get_active_missions():
+    session = Session(engine)
+    missions = session.query(Mission).filter_by(is_active=1).order_by(Mission.created_at.desc()).all()
+    result = []
+    for mission in missions:
+        result.append(mission_dict(mission))
+    session.close()
+    return result
+
+
 def get_mission(mission_id):
     session = Session(engine)
     mission = session.get(Mission, mission_id)
@@ -184,6 +194,29 @@ def get_mission(mission_id):
     session.close()
     return result
 
+
+def update_mission(mission_id, title, description, difficulty, location, reward, is_active):
+    session = Session(engine)
+    mission = session.get(Mission, mission_id)
+    if mission is None:
+        session.close()
+        return None
+    if title is not None:
+        mission.title = title
+    if description is not None:
+        mission.description = description
+    if difficulty is not None:
+        mission.difficulty = difficulty
+    if location is not None:
+        mission.location = location
+    if reward is not None:
+        mission.reward = reward
+    if is_active is not None:
+        mission.is_active = is_active
+    session.commit()
+    result = mission_dict(mission)
+    session.close()
+    return result
 
 def player_mission_dict(player_mission, mission):
     return {
