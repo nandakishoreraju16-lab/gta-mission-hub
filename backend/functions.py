@@ -237,7 +237,7 @@ def has_open_mission(player_id, mission_id):
     rows = session.query(PlayerMission).filter_by(player_id=player_id, mission_id=mission_id).all()
     found = False
     for row in rows:
-        if row.status == "accepted" or row.status == "submitted":
+        if row.status == "accepted" or row.status == "submitted" or row.status == "approved":
             found = True
     session.close()
     return found
