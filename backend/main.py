@@ -103,6 +103,18 @@ def get_missions(token = Header(None)):
     return functions.get_active_missions()
 
 
+# E4 - Get details of a particular mission (All)
+@app.get("/missions/{mission_id}")
+def get_mission(mission_id: int, token = Header(None)):
+    user_id = functions.verify_token(token=token, token_type="access")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    result = functions.get_mission(mission_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return result
+
+
 # E6 - Accept a mission (Player)
 @app.post("/missions/{mission_id}/accept", status_code=201)
 def accept_mission(mission_id: int, token = Header(None)):
