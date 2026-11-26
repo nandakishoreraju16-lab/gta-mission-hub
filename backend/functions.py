@@ -195,6 +195,29 @@ def get_mission(mission_id):
     return result
 
 
+def update_mission(mission_id, title, description, difficulty, location, reward, is_active):
+    session = Session(engine)
+    mission = session.get(Mission, mission_id)
+    if mission is None:
+        session.close()
+        return None
+    if title is not None:
+        mission.title = title
+    if description is not None:
+        mission.description = description
+    if difficulty is not None:
+        mission.difficulty = difficulty
+    if location is not None:
+        mission.location = location
+    if reward is not None:
+        mission.reward = reward
+    if is_active is not None:
+        mission.is_active = is_active
+    session.commit()
+    result = mission_dict(mission)
+    session.close()
+    return result
+
 def player_mission_dict(player_mission, mission):
     return {
         "id": player_mission.id,
