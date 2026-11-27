@@ -384,12 +384,14 @@ def assign_reward(player_id, reward_id):
 
 # E14 - Leaderboard (players ranked by xp)
 
-def get_total_xp(session, player_id):
+def get_total_xp(player_id):
+    session = Session(engine)
     rows = session.query(PlayerMission).filter_by(player_id=player_id, status="approved").all()
     total_xp = 0
     for row in rows:
         mission = session.get(Mission, row.mission_id)
         total_xp = total_xp + DIFFICULTY_XP[mission.difficulty]
+    session.close()
     return total_xp
 
 
