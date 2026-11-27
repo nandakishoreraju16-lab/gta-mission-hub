@@ -45,5 +45,7 @@ jobs:
               -p 8001:8001 \
               -v /opt/gta/data:/app/data \
               -e SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+              -e ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}" \
+              -e ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
               ${{ env.IMAGE }}:${{ env.VERSION }}
             sudo docker ps --filter name=gta-api
